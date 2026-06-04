@@ -24,31 +24,44 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
 
       - name: Download gradle-wrapper.jar
         run: |
           mkdir -p gradle/wrapper
           curl -fsSL \
             -o gradle/wrapper/gradle-wrapper.jar \
-            https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar
+            https://raw.githubusercontent.com/gradle/gradle/v8.6.0/gradle/wrapper/gradle-wrapper.jar || \
+          curl -fsSL \
+            -o gradle/wrapper/gradle-wrapper.jar \
+            https://services.gradle.org/distributions/gradle-8.6-wrapper.jar || \
+          wget -q -O gradle/wrapper/gradle-wrapper.jar \
+            https://jcenter.bintray.com/org/gradle/gradle/8.6/gradle-8.6-wrapper.jar || true
+          if [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "Downloading wrapper jar via gradle bootstrap..."
+            curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle.zip
+            unzip -p /tmp/gradle.zip '*/lib/gradle-launcher-*.jar' > gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+          fi
           ls -lh gradle/wrapper/gradle-wrapper.jar
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Setup Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
       - name: Extract version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+        run: |
+          TAG="${{ github.ref_name }}"
+          echo "VERSION=${TAG}" >> $GITHUB_OUTPUT
+          echo "Build version: ${TAG}"
 
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon --stacktrace
@@ -57,18 +70,20 @@ jobs:
         id: apk
         run: |
           APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          DEST="CloudMelody-${{ steps.version.outputs.VERSION }}.apk"
+          echo "Found APK: $APK"
+          VERSION="${{ steps.version.outputs.VERSION }}"
+          DEST="CloudMelody-${VERSION}.apk"
           cp "$APK" "$DEST"
-          echo "path=$DEST" >> $GITHUB_OUTPUT
+          echo "path=${DEST}" >> $GITHUB_OUTPUT
           ls -lh "$DEST"
 
       - name: Generate changelog
         id: changelog
         run: |
-          CURRENT="${GITHUB_REF#refs/tags/}"
+          CURRENT="${{ github.ref_name }}"
           PREV=$(git tag --sort=-version:refname | grep -v "^${CURRENT}$" | head -1)
           if [ -n "$PREV" ]; then
-            NOTES=$(git log --pretty=format:'- %s' "${PREV}..${CURRENT}" 2>/dev/null || echo '- Improvements')
+            NOTES=$(git log --pretty=format:'- %s' "${PREV}..${CURRENT}" 2>/dev/null || echo '- Improvements and bug fixes')
           else
             NOTES=$(git log --pretty=format:'- %s' | head -20)
           fi
@@ -82,16 +97,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "CloudMelody ${{ github.ref_name }} 🎵"
+          name: "CloudMelody ${{ steps.version.outputs.VERSION }} \U0001F3B5"
           body: |
-            ## 🎵 CloudMelody ${{ github.ref_name }}
+            ## \U0001F3B5 CloudMelody ${{ steps.version.outputs.VERSION }}
 
             > 轻量第三方网易云音乐安卓客户端 · BlueArchive 主题 · Apple 歌词 · os=pc 登录
 
-            ### 📦 安装
+            ### \U0001F4E6 安装
             下载下方 `.apk` 并安装到 Android 5.0+ 设备。
 
-            ### 🆕 更新
+            ### \U0001F195 更新
             ${{ steps.changelog.outputs.NOTES }}
 
             ### ⚠️ 说明
@@ -99,4 +114,4 @@ jobs:
             - 仅供学习交流，请支持正版音乐
           files: ${{ steps.apk.outputs.path }}
           fail_on_unmatched_files: true
-          prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
