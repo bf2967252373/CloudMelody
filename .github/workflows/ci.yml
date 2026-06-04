@@ -9,13 +9,13 @@ on:
 permissions:
   contents: read
 
-env:
-  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-
 jobs:
   build:
     name: Build Debug APK
     runs-on: ubuntu-latest
+
+    env:
+      GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
 
     steps:
       - name: Checkout
@@ -26,38 +26,40 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Download gradle-wrapper.jar
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p gradle/wrapper
-          echo "Downloading Gradle 8.6 distribution to extract wrapper jar..."
+          echo ">>> Downloading gradle-8.6-bin.zip from services.gradle.org ..."
           curl -fsSL \
             https://services.gradle.org/distributions/gradle-8.6-bin.zip \
             -o /tmp/gradle-8.6-bin.zip
+          echo ">>> Extracting gradle-wrapper.jar ..."
           unzip -o -j /tmp/gradle-8.6-bin.zip \
-            'gradle-8.6/lib/plugins/gradle-wrapper-*.jar' \
-            -d /tmp/gwjar/ 2>/dev/null || true
-          if ls /tmp/gwjar/*.jar 1>/dev/null 2>&1; then
-            cp /tmp/gwjar/*.jar gradle/wrapper/gradle-wrapper.jar
-          else
-            unzip -o -j /tmp/gradle-8.6-bin.zip \
-              '*/gradle-wrapper.jar' \
-              -d gradle/wrapper/ 2>/dev/null || true
-          fi
+            'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' \
+            -d gradle/wrapper/
+          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
           ls -lh gradle/wrapper/gradle-wrapper.jar
-          echo "gradle-wrapper.jar OK"
+          echo ">>> gradle-wrapper.jar ready"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-debug
+
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk-$GITHUB_RUN_NUMBER
+          name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7

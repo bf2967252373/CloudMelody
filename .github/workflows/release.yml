@@ -8,13 +8,13 @@ on:
 permissions:
   contents: write
 
-env:
-  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
-
 jobs:
   release:
     name: Build & Publish Release APK
     runs-on: ubuntu-latest
+
+    env:
+      GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
 
     steps:
       - name: Checkout
@@ -27,67 +27,71 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Download gradle-wrapper.jar
         run: |
-          set -e
+          set -euo pipefail
           mkdir -p gradle/wrapper
-          echo "Downloading Gradle 8.6 distribution to extract wrapper jar..."
+          echo ">>> Downloading gradle-8.6-bin.zip from services.gradle.org ..."
           curl -fsSL \
             https://services.gradle.org/distributions/gradle-8.6-bin.zip \
             -o /tmp/gradle-8.6-bin.zip
+          echo ">>> Extracting gradle-wrapper.jar ..."
           unzip -o -j /tmp/gradle-8.6-bin.zip \
-            'gradle-8.6/lib/plugins/gradle-wrapper-*.jar' \
-            -d /tmp/gwjar/ 2>/dev/null || true
-          # Try multiple paths inside the zip
-          if ls /tmp/gwjar/*.jar 1>/dev/null 2>&1; then
-            cp /tmp/gwjar/*.jar gradle/wrapper/gradle-wrapper.jar
-          else
-            unzip -o -j /tmp/gradle-8.6-bin.zip \
-              '*/gradle-wrapper.jar' \
-              -d gradle/wrapper/ 2>/dev/null || true
-          fi
+            'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' \
+            -d gradle/wrapper/ 
+          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
           ls -lh gradle/wrapper/gradle-wrapper.jar
-          echo "gradle-wrapper.jar OK"
+          echo ">>> gradle-wrapper.jar ready"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-release
 
       - name: Build Release APK
         run: |
           ./gradlew assembleRelease \
             --no-daemon \
-            --stacktrace \
-            --info
+            --stacktrace
 
-      - name: Locate APK
-        id: find_apk
+      - name: Find and stage APK
         run: |
-          APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          if [ -z "$APK_PATH" ]; then
-            echo "ERROR: No APK found!"
-            find app/build/outputs -type f | head -30
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          if [ -z "$APK" ]; then
+            echo "ERROR: No APK found in app/build/outputs/apk/release"
+            find app/build -type f | head -40
             exit 1
           fi
-          echo "Found APK: $APK_PATH"
-          TAG_NAME="$GITHUB_REF_NAME"
-          DEST="CloudMelody-${TAG_NAME}.apk"
-          cp "$APK_PATH" "$DEST"
-          echo "apk_dest=$DEST" >> "$GITHUB_OUTPUT"
+          echo "Found APK: $APK"
+          TAG="$GITHUB_REF_NAME"
+          DEST="CloudMelody-${TAG}.apk"
+          cp "$APK" "$DEST"
+          echo "Staged: $DEST"
           ls -lh "$DEST"
+          echo "APK_FILE=$DEST" >> "$GITHUB_ENV"
 
-      - name: Create or update GitHub Release
+      - name: Publish to GitHub Release
         run: |
-          TAG_NAME="$GITHUB_REF_NAME"
-          APK_FILE="$(cat "$GITHUB_OUTPUT" | grep apk_dest | cut -d= -f2)"
-          echo "Publishing release $TAG_NAME with APK: $APK_FILE"
-          # Create the release (ignore if exists) then upload APK
-          gh release create "$TAG_NAME" \
-            --title "CloudMelody $TAG_NAME" \
-            --notes "CloudMelody $TAG_NAME release - NetEase Cloud Music Android client" \
-            2>/dev/null || true
-          gh release upload "$TAG_NAME" "$APK_FILE" --clobber
-          echo "Upload complete!"
+          set -euo pipefail
+          TAG="$GITHUB_REF_NAME"
+          APK="$APK_FILE"
+          echo ">>> Creating/updating release for tag: $TAG"
+          echo ">>> APK file: $APK"
+          # Create release (will fail silently if already exists)
+          gh release create "$TAG" \
+            --title "CloudMelody $TAG" \
+            --notes "$(printf '## CloudMelody %s\n\nNetEase Cloud Music third-party Android client.\n- BlueArchive theme\n- PC login (os=pc)\n- Apple-style lyrics\n- Android 5.0+\n\n**Download the .apk below to install.**' "$TAG")" \
+            2>/dev/null || echo "Release already exists, will upload APK directly."
+          # Upload APK (overwrite if already uploaded)
+          gh release upload "$TAG" "$APK" --clobber
+          echo ">>> Release published: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
         env:
           GH_TOKEN: $GITHUB_TOKEN
