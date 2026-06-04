@@ -6,7 +6,6 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
-import com.cloudmelody.R
 import com.cloudmelody.databinding.ItemPlaylistBinding
 import com.cloudmelody.model.Playlist
 
@@ -17,28 +16,28 @@ class PlaylistAdapter(
     inner class VH(val binding: ItemPlaylistBinding) : RecyclerView.ViewHolder(binding.root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
-        val b = ItemPlaylistBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return VH(b)
+        val binding = ItemPlaylistBinding.inflate(
+            LayoutInflater.from(parent.context), parent, false
+        )
+        return VH(binding)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        val p = getItem(position)
-        holder.binding.apply {
-            tvName.text = p.name
-            tvTrackCount.text = "${p.trackCount} 首"
-            ivCover.load(p.coverUrl) {
-                crossfade(true)
-                placeholder(R.drawable.placeholder_cover)
-                error(R.drawable.placeholder_cover)
-            }
-            root.setOnClickListener { onClick(p) }
+        val item = getItem(position)
+        holder.binding.tvName.text = item.name
+        holder.binding.tvCount.text = item.trackCount.toString()
+        item.coverImgUrl?.let { url ->
+            holder.binding.ivCover.load(url)
         }
+        holder.itemView.setOnClickListener { onClick(item) }
     }
 
     companion object {
         private val DIFF = object : DiffUtil.ItemCallback<Playlist>() {
-            override fun areItemsTheSame(a: Playlist, b: Playlist) = a.id == b.id
-            override fun areContentsTheSame(a: Playlist, b: Playlist) = a == b
+            override fun areItemsTheSame(oldItem: Playlist, newItem: Playlist) =
+                oldItem.id == newItem.id
+            override fun areContentsTheSame(oldItem: Playlist, newItem: Playlist) =
+                oldItem == newItem
         }
     }
 }
