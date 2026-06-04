@@ -11,8 +11,8 @@ android {
         applicationId = "com.cloudmelody"
         minSdk = 21
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.3"
+        versionCode = 4
+        versionName = "1.0.4"
     }
 
     buildTypes {
@@ -27,7 +27,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Sign with debug key for unsigned release builds in CI
+            // Sign with debug key for CI builds
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -67,15 +67,15 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    // Networking – lightweight, no Retrofit
+    // Networking
     implementation("com.squareup.okhttp3:okhttp:$okhttp")
-    // Image loading – Kotlin-first, lighter than Glide
+    // Image loading
     implementation("io.coil-kt:coil:$coil")
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines")
     // Lifecycle / ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle")
-    // Media notification (MediaStyle)
+    // Media notification
     implementation("androidx.media:media:1.7.0")
 }
