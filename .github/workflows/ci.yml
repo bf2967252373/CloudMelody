@@ -27,25 +27,16 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download gradle-wrapper.jar
-        run: |
-          set -eu
-          mkdir -p gradle/wrapper
-          echo "Downloading gradle-8.6-bin.zip ..."
-          curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle-bin.zip
-          echo "Extracting gradle-wrapper.jar ..."
-          unzip -o -j /tmp/gradle-bin.zip 'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' -d /tmp/
-          cp /tmp/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar
-          echo "gradle-wrapper.jar size:"
-          ls -lh gradle/wrapper/gradle-wrapper.jar
-          echo "Verifying classes:"
-          unzip -l gradle/wrapper/gradle-wrapper.jar | grep -E 'GradleWrapperMain|IDownload'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.6'
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
