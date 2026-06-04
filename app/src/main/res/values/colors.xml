@@ -10,7 +10,15 @@
     <color name="ba_gold">#F5C842</color>
     <color name="ba_gold_dark">#C89F1A</color>
 
-    <!-- Semantic -->
+    <!-- Semantic aliases used by layouts -->
+    <color name="ba_primary">#4B8EE8</color>
+    <color name="ba_on_primary">#FFFFFF</color>
+    <color name="ba_on_surface">#E8EEF8</color>
+    <color name="ba_on_surface_variant">#9AB3D8</color>
+    <color name="ba_error">#CF6679</color>
+    <color name="ba_surface">#1E2D50</color>
+
+    <!-- Material color roles -->
     <color name="colorPrimary">#2A3F6F</color>
     <color name="colorPrimaryDark">#1A2744</color>
     <color name="colorPrimaryVariant">#1A2744</color>

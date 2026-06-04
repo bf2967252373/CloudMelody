@@ -20,24 +20,50 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
-    <!-- Login / splash screen theme -->
+    <!-- Login screen theme -->
     <style name="Theme.CloudMelody.Login" parent="Theme.CloudMelody">
         <item name="android:windowBackground">@color/ba_blue_dark</item>
         <item name="android:statusBarColor">@color/ba_blue_dark</item>
         <item name="android:navigationBarColor">@color/ba_blue_dark</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
-    <!-- Player screen theme: immersive full dark -->
+    <!-- Player screen theme: immersive -->
     <style name="Theme.CloudMelody.Player" parent="Theme.CloudMelody">
         <item name="android:windowBackground">@color/player_bg</item>
         <item name="android:statusBarColor">#00000000</item>
         <item name="android:navigationBarColor">#00000000</item>
-        <item name="android:windowTranslucentStatus">false</item>
-        <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+    <!-- Text appearance styles used in layouts -->
+    <style name="Text.BA.Title" parent="TextAppearance.MaterialComponents.Headline5">
+        <item name="android:textColor">@color/ba_on_surface</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Text.BA.Subtitle" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textColor">@color/ba_on_surface_variant</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
+    <style name="Text.BA.Accent" parent="TextAppearance.MaterialComponents.Button">
+        <item name="android:textColor">@color/ba_on_primary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="Text.BA.Lyric" parent="TextAppearance.MaterialComponents.Body1">
+        <item name="android:textColor">@color/lyric_normal</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:gravity">center</item>
+    </style>
+
+    <style name="Text.BA.LyricHighlight" parent="Text.BA.Lyric">
+        <item name="android:textColor">@color/lyric_highlight</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
     </style>
 
 </resources>
