@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+
 jobs:
   release:
     name: Build & Publish Release APK
@@ -24,91 +27,67 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
-      - name: Restore gradle-wrapper.jar
+      - name: Download gradle-wrapper.jar
         run: |
+          set -e
           mkdir -p gradle/wrapper
-          # Decode from base64 embedded in workflow
-          base64 -d <<'WRAPPEREOF' > gradle/wrapper/gradle-wrapper.jar
-          UEsDBBQAAAgIAAAAQQAAAAAAAgAAAAAAAAAJAAAATUVUQS1JTkYvAwBQSwMEFAAACAgAAABBAFwnZj8/
-          AAAAVAAAABQAAABNRVRBLUlORi9NQU5JRkVTVC5NRvNNzMtMSy0u0Q1LLSrOzM+zUjDUM+Dl8swt
-          yEnNTc0rSSwBCuqGZJbkpFopuBclpuSkYsjCtVromfFy8XIBAFBLAwQUAAAICAAAAEEAAAAAAAIA
-          AAAAAAAABAAAAm9yZy8DAFBLAwQUAAAICAAAAEEAAAAAAAIAAAAAAAAACwAAAG9yZy9ncmFkbGUv
-          AwBQSwMEFAAACAgAAABBAAAAAAACAAAAAAAAABMAAABvcmcvZ3JhZGxlL3dyYXBwZXIvAwBQSwME
-          FAAACAgAAABBAIbo13cnCgAAXhcAACoAAABvcmcvZ3JhZGxlL3dyYXBwZXIvR3JhZGxlV3JhcHBl
-          ck1haW4uY2xhc3MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-          WRAPPEREOF
-          # Verify or fallback download
-          if [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Falling back to downloading gradle-wrapper.jar..."
-            curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle.zip
-            unzip -j /tmp/gradle.zip '*/gradle-wrapper.jar' -d gradle/wrapper/ 2>/dev/null || true
+          echo "Downloading Gradle 8.6 distribution to extract wrapper jar..."
+          curl -fsSL \
+            https://services.gradle.org/distributions/gradle-8.6-bin.zip \
+            -o /tmp/gradle-8.6-bin.zip
+          unzip -o -j /tmp/gradle-8.6-bin.zip \
+            'gradle-8.6/lib/plugins/gradle-wrapper-*.jar' \
+            -d /tmp/gwjar/ 2>/dev/null || true
+          # Try multiple paths inside the zip
+          if ls /tmp/gwjar/*.jar 1>/dev/null 2>&1; then
+            cp /tmp/gwjar/*.jar gradle/wrapper/gradle-wrapper.jar
+          else
+            unzip -o -j /tmp/gradle-8.6-bin.zip \
+              '*/gradle-wrapper.jar' \
+              -d gradle/wrapper/ 2>/dev/null || true
           fi
           ls -lh gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar OK"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Setup Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
       - name: Build Release APK
-        run: ./gradlew assembleRelease --no-daemon --stacktrace
-        env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g
-
-      - name: Locate and rename APK
-        id: apk
         run: |
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          echo "Found APK: $APK"
-          TAG=${GITHUB_REF_NAME}
-          DEST="CloudMelody-${TAG}.apk"
-          cp "$APK" "$DEST"
-          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          ./gradlew assembleRelease \
+            --no-daemon \
+            --stacktrace \
+            --info
+
+      - name: Locate APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          if [ -z "$APK_PATH" ]; then
+            echo "ERROR: No APK found!"
+            find app/build/outputs -type f | head -30
+            exit 1
+          fi
+          echo "Found APK: $APK_PATH"
+          TAG_NAME="$GITHUB_REF_NAME"
+          DEST="CloudMelody-${TAG_NAME}.apk"
+          cp "$APK_PATH" "$DEST"
+          echo "apk_dest=$DEST" >> "$GITHUB_OUTPUT"
           ls -lh "$DEST"
 
-      - name: Generate changelog
-        id: changelog
+      - name: Create or update GitHub Release
         run: |
-          CURRENT=${GITHUB_REF_NAME}
-          PREV=$(git tag --sort=-version:refname | grep -v "^${CURRENT}$" | head -1)
-          if [ -n "$PREV" ]; then
-            NOTES=$(git log --pretty=format:'- %s' "${PREV}..${CURRENT}" 2>/dev/null || echo '- Improvements and bug fixes')
-          else
-            NOTES=$(git log --pretty=format:'- %s' | head -20)
-          fi
-          {
-            echo 'NOTES<<ENDOFNOTES'
-            printf '%s\n' "$NOTES"
-            echo 'ENDOFNOTES'
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Publish Release
-        run: |
-          TAG=${GITHUB_REF_NAME}
-          APK_PATH="${{ steps.apk.outputs.path }}"
-          NOTES="${{ steps.changelog.outputs.NOTES }}"
-          BODY="## 🎵 CloudMelody ${TAG}\n\n> 轻量第三方网易云音乐安卓客户端 · BlueArchive 主题 · Apple 歌词 · os=pc 登录\n\n### 📦 安装\n下载下方 \`.apk\` 并安装到 Android 5.0+ 设备。\n\n### 🆕 更新\n${NOTES}\n\n### ⚠️ 说明\n- 需自行配置 PROXY_BASE（见 QUICKSTART.md）\n- 仅供学习交流，请支持正版音乐"
-          gh release create "${TAG}" \
-            --title "CloudMelody ${TAG} 🎵" \
-            --notes "${BODY}" \
-            "${APK_PATH}" || \
-          gh release upload "${TAG}" "${APK_PATH}" --clobber
+          TAG_NAME="$GITHUB_REF_NAME"
+          APK_FILE="$(cat "$GITHUB_OUTPUT" | grep apk_dest | cut -d= -f2)"
+          echo "Publishing release $TAG_NAME with APK: $APK_FILE"
+          # Create the release (ignore if exists) then upload APK
+          gh release create "$TAG_NAME" \
+            --title "CloudMelody $TAG_NAME" \
+            --notes "CloudMelody $TAG_NAME release - NetEase Cloud Music Android client" \
+            2>/dev/null || true
+          gh release upload "$TAG_NAME" "$APK_FILE" --clobber
+          echo "Upload complete!"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: $GITHUB_TOKEN

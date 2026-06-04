@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+env:
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+
 jobs:
   build:
     name: Build Debug APK
@@ -23,38 +26,38 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: gradle
 
-      - name: Restore gradle-wrapper.jar
+      - name: Download gradle-wrapper.jar
         run: |
+          set -e
           mkdir -p gradle/wrapper
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Downloading gradle-wrapper.jar from Gradle distributions..."
-            curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle.zip
-            unzip -j /tmp/gradle.zip '*/gradle-wrapper.jar' -d gradle/wrapper/ 2>/dev/null || true
+          echo "Downloading Gradle 8.6 distribution to extract wrapper jar..."
+          curl -fsSL \
+            https://services.gradle.org/distributions/gradle-8.6-bin.zip \
+            -o /tmp/gradle-8.6-bin.zip
+          unzip -o -j /tmp/gradle-8.6-bin.zip \
+            'gradle-8.6/lib/plugins/gradle-wrapper-*.jar' \
+            -d /tmp/gwjar/ 2>/dev/null || true
+          if ls /tmp/gwjar/*.jar 1>/dev/null 2>&1; then
+            cp /tmp/gwjar/*.jar gradle/wrapper/gradle-wrapper.jar
+          else
+            unzip -o -j /tmp/gradle-8.6-bin.zip \
+              '*/gradle-wrapper.jar' \
+              -d gradle/wrapper/ 2>/dev/null || true
           fi
           ls -lh gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar OK"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Setup Gradle cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
-        env:
-          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g
 
-      - name: Upload Debug APK
+      - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: debug-apk-$GITHUB_RUN_NUMBER
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7
