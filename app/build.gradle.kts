@@ -11,8 +11,8 @@ android {
         applicationId = "com.cloudmelody"
         minSdk = 21
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.0.4"
+        versionCode = 9
+        versionName = "1.0.9"
     }
 
     buildTypes {
@@ -34,6 +34,7 @@ android {
 
     buildFeatures {
         viewBinding = true
+        dataBinding = false
     }
 
     compileOptions {
