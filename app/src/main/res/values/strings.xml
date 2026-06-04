@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CloudMelody</string>
+
+    <!-- Search & Home -->
+    <string name="search_hint">搜索歌曲、歌手…</string>
+    <string name="hot_playlists">热门歌单</string>
+    <string name="now_playing">正在播放</string>
+    <string name="loading">加载中…</string>
+    <string name="error_load_failed">加载失败，请检查网络</string>
+
+    <!-- Player -->
+    <string name="no_lyrics">暂无歌词</string>
+    <string name="tap_lyrics">轻触封面切换歌词</string>
+
+    <!-- Login -->
+    <string name="login_title">CloudMelody</string>
+    <string name="login_subtitle">登录标识为 pc · 网易云音乐账号</string>
+    <string name="phone_login">手机号</string>
+    <string name="email_login">邮箱</string>
+    <string name="country_code">区号</string>
+    <string name="phone_hint">手机号</string>
+    <string name="email_hint">邮箱地址</string>
+    <string name="password_hint">密码</string>
+    <string name="login_btn">登录</string>
+    <string name="skip_login">跳过登录</string>
+    <string name="login_footer">登录即表示同意网易云音乐用户协议\n本应用仅供学习交流，请支持正版音乐</string>
+
+    <!-- User -->
+    <string name="logout">退出登录</string>
+    <string name="my_playlists">我的歌单</string>
+    <string name="daily_recommend">每日推荐</string>
+
+    <!-- Common -->
+    <string name="retry">重试</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确认</string>
+</resources>
