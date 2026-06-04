@@ -1,12 +1,13 @@
-name: CI Build
+name: CI
 
 on:
   push:
-    branches: [ main, dev ]
-    tags-ignore:
-      - 'v*'
+    branches: [ main ]
   pull_request:
     branches: [ main ]
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -14,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -22,32 +23,38 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
-      - name: Cache Gradle
+      - name: Restore gradle-wrapper.jar
+        run: |
+          mkdir -p gradle/wrapper
+          if [ ! -f gradle/wrapper/gradle-wrapper.jar ] || [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
+            echo "Downloading gradle-wrapper.jar from Gradle distributions..."
+            curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle.zip
+            unzip -j /tmp/gradle.zip '*/gradle-wrapper.jar' -d gradle/wrapper/ 2>/dev/null || true
+          fi
+          ls -lh gradle/wrapper/gradle-wrapper.jar
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Setup Gradle cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: ${{ runner.os }}-gradle-
-
-      - name: Download gradle-wrapper.jar
-        run: |
-          mkdir -p gradle/wrapper
-          curl -fsSL -o gradle/wrapper/gradle-wrapper.jar \
-            https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar
-
-      - name: Make gradlew executable
-        run: chmod +x gradlew
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --no-daemon
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: CloudMelody-debug-${{ github.sha }}
+          name: debug-apk
           path: app/build/outputs/apk/debug/*.apk
           retention-days: 7

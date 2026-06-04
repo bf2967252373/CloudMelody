@@ -25,21 +25,32 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download gradle-wrapper.jar
+      - name: Restore gradle-wrapper.jar
         run: |
           mkdir -p gradle/wrapper
-          curl -fsSL \
-            -o gradle/wrapper/gradle-wrapper.jar \
-            https://raw.githubusercontent.com/gradle/gradle/v8.6.0/gradle/wrapper/gradle-wrapper.jar || \
-          curl -fsSL \
-            -o gradle/wrapper/gradle-wrapper.jar \
-            https://services.gradle.org/distributions/gradle-8.6-wrapper.jar || \
-          wget -q -O gradle/wrapper/gradle-wrapper.jar \
-            https://jcenter.bintray.com/org/gradle/gradle/8.6/gradle-8.6-wrapper.jar || true
+          # Decode from base64 embedded in workflow
+          base64 -d <<'WRAPPEREOF' > gradle/wrapper/gradle-wrapper.jar
+          UEsDBBQAAAgIAAAAQQAAAAAAAgAAAAAAAAAJAAAATUVUQS1JTkYvAwBQSwMEFAAACAgAAABBAFwnZj8/
+          AAAAVAAAABQAAABNRVRBLUlORi9NQU5JRkVTVC5NRvNNzMtMSy0u0Q1LLSrOzM+zUjDUM+Dl8swt
+          yEnNTc0rSSwBCuqGZJbkpFopuBclpuSkYsjCtVromfFy8XIBAFBLAwQUAAAICAAAAEEAAAAAAAIA
+          AAAAAAAABAAAAm9yZy8DAFBLAwQUAAAICAAAAEEAAAAAAAIAAAAAAAAACwAAAG9yZy9ncmFkbGUv
+          AwBQSwMEFAAACAgAAABBAAAAAAACAAAAAAAAABMAAABvcmcvZ3JhZGxlL3dyYXBwZXIvAwBQSwME
+          FAAACAgAAABBAIbo13cnCgAAXhcAACoAAABvcmcvZ3JhZGxlL3dyYXBwZXIvR3JhZGxlV3JhcHBl
+          ck1haW4uY2xhc3MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+          WRAPPEREOF
+          # Verify or fallback download
           if [ ! -s gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "Downloading wrapper jar via gradle bootstrap..."
+            echo "Falling back to downloading gradle-wrapper.jar..."
             curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle.zip
-            unzip -p /tmp/gradle.zip '*/lib/gradle-launcher-*.jar' > gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+            unzip -j /tmp/gradle.zip '*/gradle-wrapper.jar' -d gradle/wrapper/ 2>/dev/null || true
           fi
           ls -lh gradle/wrapper/gradle-wrapper.jar
 
@@ -52,35 +63,30 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - name: Extract version
-        id: version
-        run: |
-          TAG="${{ github.ref_name }}"
-          echo "VERSION=${TAG}" >> $GITHUB_OUTPUT
-          echo "Build version: ${TAG}"
-
       - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon --stacktrace
+        env:
+          GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2g
 
       - name: Locate and rename APK
         id: apk
         run: |
           APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
           echo "Found APK: $APK"
-          VERSION="${{ steps.version.outputs.VERSION }}"
-          DEST="CloudMelody-${VERSION}.apk"
+          TAG=${GITHUB_REF_NAME}
+          DEST="CloudMelody-${TAG}.apk"
           cp "$APK" "$DEST"
-          echo "path=${DEST}" >> $GITHUB_OUTPUT
+          echo "path=$DEST" >> "$GITHUB_OUTPUT"
           ls -lh "$DEST"
 
       - name: Generate changelog
         id: changelog
         run: |
-          CURRENT="${{ github.ref_name }}"
+          CURRENT=${GITHUB_REF_NAME}
           PREV=$(git tag --sort=-version:refname | grep -v "^${CURRENT}$" | head -1)
           if [ -n "$PREV" ]; then
             NOTES=$(git log --pretty=format:'- %s' "${PREV}..${CURRENT}" 2>/dev/null || echo '- Improvements and bug fixes')
@@ -91,27 +97,18 @@ jobs:
             echo 'NOTES<<ENDOFNOTES'
             printf '%s\n' "$NOTES"
             echo 'ENDOFNOTES'
-          } >> $GITHUB_OUTPUT
+          } >> "$GITHUB_OUTPUT"
 
-      - name: Publish Release and upload APK
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "CloudMelody ${{ steps.version.outputs.VERSION }} \U0001F3B5"
-          body: |
-            ## \U0001F3B5 CloudMelody ${{ steps.version.outputs.VERSION }}
-
-            > 轻量第三方网易云音乐安卓客户端 · BlueArchive 主题 · Apple 歌词 · os=pc 登录
-
-            ### \U0001F4E6 安装
-            下载下方 `.apk` 并安装到 Android 5.0+ 设备。
-
-            ### \U0001F195 更新
-            ${{ steps.changelog.outputs.NOTES }}
-
-            ### ⚠️ 说明
-            - 需自行配置 `PROXY_BASE`（见 QUICKSTART.md）
-            - 仅供学习交流，请支持正版音乐
-          files: ${{ steps.apk.outputs.path }}
-          fail_on_unmatched_files: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+      - name: Publish Release
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          APK_PATH="${{ steps.apk.outputs.path }}"
+          NOTES="${{ steps.changelog.outputs.NOTES }}"
+          BODY="## 🎵 CloudMelody ${TAG}\n\n> 轻量第三方网易云音乐安卓客户端 · BlueArchive 主题 · Apple 歌词 · os=pc 登录\n\n### 📦 安装\n下载下方 \`.apk\` 并安装到 Android 5.0+ 设备。\n\n### 🆕 更新\n${NOTES}\n\n### ⚠️ 说明\n- 需自行配置 PROXY_BASE（见 QUICKSTART.md）\n- 仅供学习交流，请支持正版音乐"
+          gh release create "${TAG}" \
+            --title "CloudMelody ${TAG} 🎵" \
+            --notes "${BODY}" \
+            "${APK_PATH}" || \
+          gh release upload "${TAG}" "${APK_PATH}" --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
