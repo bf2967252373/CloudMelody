@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   release:
-    name: Build & Publish Release APK
+    name: Build and Publish Release APK
     runs-on: ubuntu-latest
 
     env:
@@ -30,19 +30,15 @@ jobs:
 
       - name: Download gradle-wrapper.jar
         run: |
-          set -euo pipefail
+          set -eu
           mkdir -p gradle/wrapper
-          echo ">>> Downloading gradle-8.6-bin.zip from services.gradle.org ..."
-          curl -fsSL \
-            https://services.gradle.org/distributions/gradle-8.6-bin.zip \
-            -o /tmp/gradle-8.6-bin.zip
-          echo ">>> Extracting gradle-wrapper.jar ..."
-          unzip -o -j /tmp/gradle-8.6-bin.zip \
-            'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' \
-            -d gradle/wrapper/ 
-          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+          echo "Downloading gradle-8.6-bin.zip ..."
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle-bin.zip
+          echo "Extracting gradle-wrapper.jar ..."
+          unzip -o -j /tmp/gradle-bin.zip 'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' -d gradle/wrapper/
+          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar size:"
           ls -lh gradle/wrapper/gradle-wrapper.jar
-          echo ">>> gradle-wrapper.jar ready"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -56,42 +52,36 @@ jobs:
           key: gradle-release
 
       - name: Build Release APK
-        run: |
-          ./gradlew assembleRelease \
-            --no-daemon \
-            --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
-      - name: Find and stage APK
+      - name: Stage APK
         run: |
-          set -euo pipefail
-          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
-          if [ -z "$APK" ]; then
-            echo "ERROR: No APK found in app/build/outputs/apk/release"
-            find app/build -type f | head -40
+          set -eu
+          APK_SRC=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          if [ -z "$APK_SRC" ]; then
+            echo "No APK found!"
+            find app/build -type f | head -30
             exit 1
           fi
-          echo "Found APK: $APK"
-          TAG="$GITHUB_REF_NAME"
-          DEST="CloudMelody-${TAG}.apk"
-          cp "$APK" "$DEST"
-          echo "Staged: $DEST"
-          ls -lh "$DEST"
-          echo "APK_FILE=$DEST" >> "$GITHUB_ENV"
+          TAG=$GITHUB_REF_NAME
+          APK_DEST="CloudMelody-$TAG.apk"
+          cp "$APK_SRC" "$APK_DEST"
+          echo "APK staged: $APK_DEST"
+          ls -lh "$APK_DEST"
+          echo "RELEASE_APK=$APK_DEST" >> $GITHUB_ENV
 
-      - name: Publish to GitHub Release
+      - name: Publish GitHub Release
         run: |
-          set -euo pipefail
-          TAG="$GITHUB_REF_NAME"
-          APK="$APK_FILE"
-          echo ">>> Creating/updating release for tag: $TAG"
-          echo ">>> APK file: $APK"
-          # Create release (will fail silently if already exists)
+          set -eu
+          TAG=$GITHUB_REF_NAME
+          APK=$RELEASE_APK
+          echo "Publishing release $TAG ..."
+          echo "APK: $APK"
           gh release create "$TAG" \
             --title "CloudMelody $TAG" \
-            --notes "$(printf '## CloudMelody %s\n\nNetEase Cloud Music third-party Android client.\n- BlueArchive theme\n- PC login (os=pc)\n- Apple-style lyrics\n- Android 5.0+\n\n**Download the .apk below to install.**' "$TAG")" \
-            2>/dev/null || echo "Release already exists, will upload APK directly."
-          # Upload APK (overwrite if already uploaded)
+            --notes "CloudMelody $TAG - Third-party NetEase Cloud Music Android client. BlueArchive theme, PC login (os=pc), Apple-style lyrics, Android 5.0+." \
+            2>/dev/null || echo "Release already exists."
           gh release upload "$TAG" "$APK" --clobber
-          echo ">>> Release published: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
+          echo "Done: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
         env:
           GH_TOKEN: $GITHUB_TOKEN

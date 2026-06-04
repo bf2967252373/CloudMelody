@@ -29,19 +29,15 @@ jobs:
 
       - name: Download gradle-wrapper.jar
         run: |
-          set -euo pipefail
+          set -eu
           mkdir -p gradle/wrapper
-          echo ">>> Downloading gradle-8.6-bin.zip from services.gradle.org ..."
-          curl -fsSL \
-            https://services.gradle.org/distributions/gradle-8.6-bin.zip \
-            -o /tmp/gradle-8.6-bin.zip
-          echo ">>> Extracting gradle-wrapper.jar ..."
-          unzip -o -j /tmp/gradle-8.6-bin.zip \
-            'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' \
-            -d gradle/wrapper/
-          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+          echo "Downloading gradle-8.6-bin.zip ..."
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle-bin.zip
+          echo "Extracting gradle-wrapper.jar ..."
+          unzip -o -j /tmp/gradle-bin.zip 'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' -d gradle/wrapper/
+          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar
+          echo "gradle-wrapper.jar size:"
           ls -lh gradle/wrapper/gradle-wrapper.jar
-          echo ">>> gradle-wrapper.jar ready"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
@@ -57,7 +53,7 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-      - name: Upload Debug APK artifact
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
