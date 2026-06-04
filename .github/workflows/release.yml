@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -35,17 +35,22 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: ${{ runner.os }}-gradle-
 
-      - name: Extract version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      - name: Download gradle-wrapper.jar
+        run: |
+          mkdir -p gradle/wrapper
+          curl -fsSL \
+            -o gradle/wrapper/gradle-wrapper.jar \
+            https://github.com/gradle/gradle/raw/v8.6.0/gradle/wrapper/gradle-wrapper.jar
+          ls -lh gradle/wrapper/gradle-wrapper.jar
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Validate Gradle wrapper
-        uses: gradle/actions/wrapper-validation@v3
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Build Release APK (unsigned)
+      - name: Build Release APK
         run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Locate and rename APK
@@ -55,43 +60,43 @@ jobs:
           DEST="CloudMelody-${{ steps.version.outputs.VERSION }}.apk"
           cp "$APK" "$DEST"
           echo "path=$DEST" >> $GITHUB_OUTPUT
-          echo "Renamed: $APK -> $DEST"
+          ls -lh "$DEST"
 
       - name: Generate changelog
         id: changelog
         run: |
-          CURRENT_TAG="${GITHUB_REF#refs/tags/}"
-          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -1)
-          if [ -n "$PREV_TAG" ]; then
-            NOTES=$(git log --pretty=format:"- %s" "${PREV_TAG}..${CURRENT_TAG}")
+          CURRENT="${GITHUB_REF#refs/tags/}"
+          PREV=$(git tag --sort=-version:refname | grep -v "^${CURRENT}$" | head -1)
+          if [ -n "$PREV" ]; then
+            NOTES=$(git log --pretty=format:'- %s' "${PREV}..${CURRENT}" 2>/dev/null || echo '- Improvements')
           else
-            NOTES=$(git log --pretty=format:"- %s")
+            NOTES=$(git log --pretty=format:'- %s' | head -20)
           fi
           {
             echo 'NOTES<<ENDOFNOTES'
-            printf '%s' "$NOTES"
-            echo ''
+            printf '%s\n' "$NOTES"
             echo 'ENDOFNOTES'
           } >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release and upload APK
+      - name: Publish Release and upload APK
         uses: softprops/action-gh-release@v2
         with:
-          name: "CloudMelody ${{ github.ref_name }} \U0001F3B5"
+          tag_name: ${{ github.ref_name }}
+          name: "CloudMelody ${{ github.ref_name }} 🎵"
           body: |
-            ## \U0001F3B5 CloudMelody ${{ github.ref_name }}
+            ## 🎵 CloudMelody ${{ github.ref_name }}
 
-            > \u8f7b\u91cf\u7b2c\u4e09\u65b9\u7f51\u6613\u4e91\u97f3\u4e50\u5b89\u5349\u5ba2\u6237\u7aef \u00b7 BlueArchive \u4e3b\u9898 \u00b7 Apple \u98ce\u683c\u6b4c\u8bcd \u00b7 \u767b\u5f55\u6807\u8bc6 os=pc
+            > 轻量第三方网易云音乐安卓客户端 · BlueArchive 主题 · Apple 歌词 · os=pc 登录
 
-            ### \U0001F4E6 \u5b89\u88c5
-            \u4e0b\u8f7d\u4e0b\u65b9\u7684 `.apk` \u5e76\u5b89\u88c5\u5230 Android 5.0+ \u8bbe\u5907\u3002
+            ### 📦 安装
+            下载下方 `.apk` 并安装到 Android 5.0+ 设备。
 
-            ### \U0001F195 \u66f4\u65b0
+            ### 🆕 更新
             ${{ steps.changelog.outputs.NOTES }}
 
-            ### \u26a0\ufe0f \u8bf4\u660e
-            - \u9700\u81ea\u884c\u914d\u7f6e `PROXY_BASE`\uff08\u89c1 QUICKSTART.md\uff09
-            - \u4ec5\u4f9b\u5b66\u4e60\u4ea4\u6d41\uff0c\u8bf7\u652f\u6301\u6b63\u7248\u97f3\u4e50
+            ### ⚠️ 说明
+            - 需自行配置 `PROXY_BASE`（见 QUICKSTART.md）
+            - 仅供学习交流，请支持正版音乐
           files: ${{ steps.apk.outputs.path }}
           fail_on_unmatched_files: true
           prerelease: ${{ contains(github.ref_name, 'alpha') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') }}
