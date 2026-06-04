@@ -28,18 +28,6 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Download gradle-wrapper.jar
-        run: |
-          set -eu
-          mkdir -p gradle/wrapper
-          echo "Downloading gradle-8.6-bin.zip ..."
-          curl -fsSL https://services.gradle.org/distributions/gradle-8.6-bin.zip -o /tmp/gradle-bin.zip
-          echo "Extracting gradle-wrapper.jar ..."
-          unzip -o -j /tmp/gradle-bin.zip 'gradle-8.6/lib/plugins/gradle-wrapper-8.6.jar' -d gradle/wrapper/
-          mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar
-          echo "gradle-wrapper.jar size:"
-          ls -lh gradle/wrapper/gradle-wrapper.jar
-
       - name: Make gradlew executable
         run: chmod +x gradlew
 
@@ -84,4 +72,4 @@ jobs:
           gh release upload "$TAG" "$APK" --clobber
           echo "Done: https://github.com/$GITHUB_REPOSITORY/releases/tag/$TAG"
         env:
-          GH_TOKEN: $GITHUB_TOKEN
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
