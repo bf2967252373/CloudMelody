@@ -38,6 +38,8 @@ jobs:
           mv gradle/wrapper/gradle-wrapper-8.6.jar gradle/wrapper/gradle-wrapper.jar
           echo "gradle-wrapper.jar size:"
           ls -lh gradle/wrapper/gradle-wrapper.jar
+          echo "Verifying classes:"
+          unzip -l gradle/wrapper/gradle-wrapper.jar | grep -E 'GradleWrapperMain|IDownload'
 
       - name: Make gradlew executable
         run: chmod +x gradlew
