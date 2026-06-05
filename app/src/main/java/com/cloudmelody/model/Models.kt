@@ -2,6 +2,7 @@ package com.cloudmelody.model
 
 /**
  * Core data models – kept minimal to reduce serialization overhead.
+ * NOTE: Playlist is defined separately in Playlist.kt
  */
 
 data class Song(
@@ -11,14 +12,6 @@ data class Song(
     val album: String,
     val coverUrl: String?,
     val duration: Long          // milliseconds
-)
-
-data class Playlist(
-    val id: Long,
-    val name: String,
-    val coverUrl: String?,
-    val trackCount: Int,
-    val playCount: Long
 )
 
 data class LyricResult(

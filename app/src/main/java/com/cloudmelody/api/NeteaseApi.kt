@@ -3,6 +3,7 @@ package com.cloudmelody.api
 import com.cloudmelody.model.Playlist
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -22,10 +23,80 @@ object NeteaseApi {
 
     fun get(): NeteaseApi = this
 
-    /**
-     * Fetch personalised / recommended playlists.
-     * Falls back to an empty list on any error so the UI can display gracefully.
-     */
+    // ─── Login result sealed class ─────────────────────────────────────────
+
+    sealed class LoginResult {
+        data class Success(val nickname: String, val avatar: String) : LoginResult()
+        data class Error(val message: String) : LoginResult()
+    }
+
+    // ─── Login: phone ──────────────────────────────────────────────────────
+
+    suspend fun loginPhone(
+        phone: String,
+        password: String,
+        countryCode: String = "86"
+    ): LoginResult = withContext(Dispatchers.IO) {
+        runCatching {
+            val body = FormBody.Builder()
+                .add("phone", phone)
+                .add("password", password)
+                .add("countrycode", countryCode)
+                .add("rememberLogin", "true")
+                .build()
+            val req = Request.Builder()
+                .url("$BASE/weapi/login/cellphone")
+                .post(body)
+                .header("User-Agent", USER_AGENT)
+                .header("Referer", BASE)
+                .header("Cookie", "os=pc")
+                .build()
+            val json = client.newCall(req).execute().use { it.body?.string() ?: "" }
+            parseLoginResponse(json)
+        }.getOrElse { e -> LoginResult.Error(e.message ?: "Network error") }
+    }
+
+    // ─── Login: email ──────────────────────────────────────────────────────
+
+    suspend fun loginEmail(
+        email: String,
+        password: String
+    ): LoginResult = withContext(Dispatchers.IO) {
+        runCatching {
+            val body = FormBody.Builder()
+                .add("username", email)
+                .add("password", password)
+                .add("rememberLogin", "true")
+                .build()
+            val req = Request.Builder()
+                .url("$BASE/weapi/login")
+                .post(body)
+                .header("User-Agent", USER_AGENT)
+                .header("Referer", BASE)
+                .header("Cookie", "os=pc")
+                .build()
+            val json = client.newCall(req).execute().use { it.body?.string() ?: "" }
+            parseLoginResponse(json)
+        }.getOrElse { e -> LoginResult.Error(e.message ?: "Network error") }
+    }
+
+    private fun parseLoginResponse(json: String): LoginResult {
+        if (json.isBlank()) return LoginResult.Error("Empty response")
+        val obj = JSONObject(json)
+        val code = obj.optInt("code", -1)
+        return if (code == 200) {
+            val profile = obj.optJSONObject("profile")
+            LoginResult.Success(
+                nickname = profile?.optString("nickname") ?: "",
+                avatar = profile?.optString("avatarUrl") ?: ""
+            )
+        } else {
+            LoginResult.Error(obj.optString("message", "Login failed (code $code)"))
+        }
+    }
+
+    // ─── Recommend playlists ───────────────────────────────────────────────
+
     suspend fun recommend(): Result<List<Playlist>> = withContext(Dispatchers.IO) {
         runCatching {
             val req = Request.Builder()
