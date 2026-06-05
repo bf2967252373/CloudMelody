@@ -2,10 +2,9 @@ package com.cloudmelody.util
 
 object TimeUtils {
 
-    /**
-     * Format milliseconds as mm:ss (e.g. 3:45).
-     */
+    /** 毫秒 → mm:ss */
     fun formatMs(ms: Long): String {
+        if (ms <= 0) return "0:00"
         val totalSeconds = ms / 1000
         val minutes = totalSeconds / 60
         val seconds = totalSeconds % 60
@@ -13,26 +12,33 @@ object TimeUtils {
     }
 
     /**
-     * Parse LRC time tag [mm:ss.xx] or [mm:ss.xxx] → milliseconds.
+     * 解析 [mm:ss.xx] / [mm:ss.xxx] / [mm:ss] 等 LRC 时间标签 → 毫秒。
+     * 错误时返回 0。
      */
     fun parseTimeTag(tag: String): Long {
         return try {
-            val clean = tag.trimStart('[').trimEnd(']')
+            val clean = tag.trim().trimStart('[').trimEnd(']')
             val colonIdx = clean.indexOf(':')
-            val dotIdx   = clean.indexOf('.')
-            val minutes  = clean.substring(0, colonIdx).toLong()
-            val seconds  = clean.substring(colonIdx + 1,
-                if (dotIdx >= 0) dotIdx else clean.length).toLong()
-            val millis   = if (dotIdx >= 0) {
-                val frac = clean.substring(dotIdx + 1)
-                when (frac.length) {
-                    2 -> frac.toLong() * 10
-                    3 -> frac.toLong()
-                    else -> 0L
+            if (colonIdx < 0) return 0L
+            val dotIdx = clean.indexOfAny(charArrayOf('.', ':'), startIndex = colonIdx + 1)
+                .let { if (it == colonIdx) -1 else it }
+            val minutes = clean.substring(0, colonIdx).toLong()
+            val seconds = clean.substring(
+                colonIdx + 1,
+                if (dotIdx >= 0) dotIdx else clean.length
+            ).toLong()
+            val millis = if (dotIdx >= 0) {
+                val frac = clean.substring(dotIdx + 1).filter { it.isDigit() }
+                when {
+                    frac.isEmpty() -> 0L
+                    frac.length == 1 -> frac.toLong() * 100
+                    frac.length == 2 -> frac.toLong() * 10
+                    frac.length == 3 -> frac.toLong()
+                    else -> frac.substring(0, 3).toLong()
                 }
             } else 0L
             (minutes * 60 + seconds) * 1000 + millis
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             0L
         }
     }
