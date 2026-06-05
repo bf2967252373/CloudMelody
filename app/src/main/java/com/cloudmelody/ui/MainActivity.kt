@@ -1,6 +1,7 @@
 package com.cloudmelody.ui
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
@@ -21,8 +22,7 @@ class MainActivity : AppCompatActivity() {
 
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName, service: IBinder) {
-            val binder = service as MusicService.MusicBinder
-            musicService = binder.getService()
+            musicService = (service as MusicService.MusicBinder).getService()
             bound = true
         }
         override fun onServiceDisconnected(name: ComponentName) {
@@ -36,19 +36,18 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Start & bind the music service
         val intent = Intent(this, MusicService::class.java)
         startService(intent)
-        bindService(intent, connection, BIND_AUTO_CREATE)
+        bindService(intent, connection, Context.BIND_AUTO_CREATE)
 
-        // Load home fragment
-        if (savedInstanceState == null) {
-            showFragment(HomeFragment())
-        }
+        if (savedInstanceState == null) showFragment(HomeFragment())
     }
 
     override fun onDestroy() {
-        if (bound) unbindService(connection)
+        if (bound) {
+            runCatching { unbindService(connection) }
+            bound = false
+        }
         super.onDestroy()
     }
 
@@ -56,6 +55,6 @@ class MainActivity : AppCompatActivity() {
         val tx = supportFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, fragment)
         if (addToBack) tx.addToBackStack(null)
-        tx.commit()
+        tx.commitAllowingStateLoss()
     }
 }
