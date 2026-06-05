@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+      GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8
 
     steps:
       - name: Checkout
@@ -37,7 +37,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build Release APK
-        run: gradle assembleRelease --no-daemon --stacktrace
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
       - name: Stage APK
         run: |
