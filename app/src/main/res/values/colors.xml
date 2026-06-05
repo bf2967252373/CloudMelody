@@ -10,6 +10,12 @@
     <color name="ba_gold">#F5C842</color>
     <color name="ba_gold_dark">#C89F1A</color>
 
+    <!-- Background shades -->
+    <color name="ba_bg_darkest">#0A0F1E</color>
+    <color name="ba_bg_dark">#121C35</color>
+    <color name="ba_bg_darker">#1A2744</color>
+    <color name="ba_bg_card">#1E2D50</color>
+
     <!-- Semantic aliases used by layouts -->
     <color name="ba_primary">#4B8EE8</color>
     <color name="ba_on_primary">#FFFFFF</color>
