@@ -12,11 +12,12 @@ class CloudMelodyApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
     }
 
-    /** Provide a shared Coil ImageLoader with disk cache to minimise repeated network calls. */
-    override fun newImageLoader(): ImageLoader {
-        return ImageLoader.Builder(this)
+    /** 共享的 Coil ImageLoader,带磁盘缓存以减少重复请求。 */
+    override fun newImageLoader(): ImageLoader =
+        ImageLoader.Builder(this)
             .memoryCache {
                 MemoryCache.Builder(this)
                     .maxSizePercent(0.20)
@@ -36,5 +37,9 @@ class CloudMelodyApp : Application(), ImageLoaderFactory {
             }
             .crossfade(true)
             .build()
+
+    companion object {
+        lateinit var instance: CloudMelodyApp
+            private set
     }
 }
