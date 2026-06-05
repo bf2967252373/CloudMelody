@@ -1,30 +1,41 @@
 package com.cloudmelody.model
 
 /**
- * Core data models – kept minimal to reduce serialization overhead.
- * NOTE: Playlist is defined separately in Playlist.kt
+ * 核心数据模型 —— 所有模型集中于此,避免重复定义。
+ * 注意:原仓库中 Playlist.kt 与 Models.kt 同时定义了 Playlist,
+ * 必须删除 Playlist.kt,只保留此处定义。
  */
 
 data class Song(
     val id: Long,
     val name: String,
     val artist: String,
-    val album: String,
-    val coverUrl: String?,
-    val duration: Long          // milliseconds
+    val album: String = "",
+    val coverUrl: String? = null,
+    val duration: Long = 0L,   // 毫秒
+    val url: String? = null    // 播放地址
+)
+
+data class Playlist(
+    val id: Long,
+    val name: String,
+    val coverUrl: String? = null,
+    val trackCount: Int = 0,
+    val playCount: Long = 0L,
+    val description: String? = null
 )
 
 data class LyricResult(
-    val original: String,       // raw LRC text
-    val translated: String      // translation LRC (may be empty)
+    val original: String,
+    val translated: String = ""
 )
 
-/** Parsed single line from LRC. */
+/** LRC 单行 */
 data class LyricLine(
-    val timeMs: Long,           // start time in ms
-    val text: String,           // display text
-    val translation: String = ""// optional translated line
+    val timeMs: Long,
+    val text: String,
+    val translation: String = ""
 )
 
-/** Playback repeat mode. */
+/** 播放循环模式 */
 enum class RepeatMode { NONE, ALL, SINGLE }
