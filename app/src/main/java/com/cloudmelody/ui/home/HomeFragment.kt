@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -17,10 +18,12 @@ class HomeFragment : Fragment() {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
-
     private val viewModel: HomeViewModel by viewModels()
-    private val playlistAdapter = PlaylistAdapter()
-    private val songAdapter     = SongAdapter()
+
+    private val adapter = PlaylistAdapter { playlist ->
+        Toast.makeText(requireContext(), playlist.name, Toast.LENGTH_SHORT).show()
+        viewModel.loadPlaylistSongs(playlist.id)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,40 +36,24 @@ class HomeFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupRecyclerView()
-        observeViewModel()
-        viewModel.loadRecommend()
-    }
+        binding.rvPlaylists.layoutManager = LinearLayoutManager(requireContext())
+        binding.rvPlaylists.adapter = adapter
 
-    private fun setupRecyclerView() {
-        binding.rvPlaylists.apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = playlistAdapter
-        }
-    }
-
-    private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.playlists.collect { list ->
-                        playlistAdapter.submitList(list)
-                    }
-                }
-                launch {
-                    viewModel.songs.collect { list ->
-                        songAdapter.submitList(list)
-                    }
+                    viewModel.playlists.collect { adapter.submitList(it) }
                 }
                 launch {
                     viewModel.error.collect { msg ->
-                        if (msg != null) {
-                            // show error snackbar or toast
+                        if (!msg.isNullOrBlank()) {
+                            Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             }
         }
+        viewModel.loadRecommend()
     }
 
     override fun onDestroyView() {
