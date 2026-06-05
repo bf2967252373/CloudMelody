@@ -5,24 +5,14 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
 import android.os.IBinder
-import android.view.animation.LinearInterpolator
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import com.cloudmelody.R
 import com.cloudmelody.databinding.ActivityPlayerBinding
-import com.cloudmelody.model.LyricLine
-import com.cloudmelody.model.RepeatMode
 import com.cloudmelody.model.Song
 import com.cloudmelody.service.MusicService
 import com.cloudmelody.util.TimeUtils
 
-/**
- * Full-screen immersive player activity.
- *
- * Features:
- *  - Rotating album art with ObjectAnimator
- *  - Tap cover → toggle AppleLyricsView
- *  - SeekBar + time labels
- *  - Controls: prev / play-pause / next / repeat / shuffle
- */
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPlayerBinding
@@ -46,7 +36,6 @@ class PlayerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityPlayerBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         setupControls()
         bindMusicService()
     }
@@ -63,38 +52,36 @@ class PlayerActivity : AppCompatActivity() {
             musicService?.togglePlayPause()
             updatePlayPauseIcon()
         }
-
         binding.btnNext.setOnClickListener {
             musicService?.skipNext()
             updateUiFromService()
         }
-
         binding.btnPrev.setOnClickListener {
             musicService?.skipPrev()
             updateUiFromService()
         }
 
-        // Tap cover to toggle lyrics
         binding.ivCover.setOnClickListener {
-            val lyricsVisible = binding.lyricsView.visibility == android.view.View.VISIBLE
+            val lyricsVisible = binding.lyricsView.visibility == View.VISIBLE
             if (lyricsVisible) {
                 binding.lyricsView.animate().alpha(0f).setDuration(250)
                     .withEndAction {
-                        binding.lyricsView.visibility = android.view.View.GONE
-                        binding.ivCover.visibility = android.view.View.VISIBLE
+                        binding.lyricsView.visibility = View.GONE
+                        binding.ivCover.visibility    = View.VISIBLE
                     }.start()
             } else {
-                binding.ivCover.visibility = android.view.View.INVISIBLE
-                binding.lyricsView.visibility = android.view.View.VISIBLE
+                binding.ivCover.visibility    = View.INVISIBLE
+                binding.lyricsView.visibility = View.VISIBLE
+                binding.lyricsView.alpha = 0f
                 binding.lyricsView.animate().alpha(1f).setDuration(250).start()
             }
         }
     }
 
     private fun updateUiFromService() {
-        val song = musicService?.currentSong ?: return
-        binding.tvTitle.text = song.name
-        binding.tvArtist.text = song.artist
+        val song: Song = musicService?.currentSong ?: return
+        binding.tvTitle.text    = song.name
+        binding.tvArtist.text   = song.artist
         binding.tvDuration.text = TimeUtils.formatMs(song.duration)
         updatePlayPauseIcon()
     }
@@ -102,8 +89,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun updatePlayPauseIcon() {
         val isPlaying = musicService?.isPlaying ?: false
         binding.btnPlayPause.setImageResource(
-            if (isPlaying) com.cloudmelody.R.drawable.ic_pause
-            else com.cloudmelody.R.drawable.ic_play
+            if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play
         )
     }
 
