@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security config: allow cleartext traffic only for local debug proxy.
+  Production traffic to music.163.com goes over HTTPS.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">music.163.com</domain>
+        <domain includeSubdomains="true">vercel.app</domain>
+    </domain-config>
+    <!-- Allow cleartext for local API proxy during development -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

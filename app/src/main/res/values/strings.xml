@@ -1,0 +1,53 @@
+<resources>
+    <string name="app_name">CloudMelody</string>
+
+    <!-- Login screen -->
+    <string name="login_title">云音乐</string>
+    <string name="login_subtitle">使用网易云音乐账号登录</string>
+    <string name="phone_login">手机号</string>
+    <string name="email_login">邮箱</string>
+    <string name="country_code">区号</string>
+    <string name="phone_hint">手机号码</string>
+    <string name="email_hint">邮箱地址</string>
+    <string name="password_hint">密码</string>
+    <string name="login_btn">登 录</string>
+    <string name="skip_login">暂不登录，游客浏览</string>
+    <string name="login_footer">登录即表示您同意网易云音乐用户协议及隐私政策</string>
+    <string name="login_error_empty">请输入账号和密码</string>
+    <string name="login_error_failed">登录失败，请检查账号密码</string>
+    <string name="login_error_network">网络错误，请重试</string>
+
+    <!-- Main / playlist -->
+    <string name="nav_home">首页</string>
+    <string name="nav_search">搜索</string>
+    <string name="nav_library">音乐库</string>
+    <string name="search_hint">搜索歌曲、歌手、专辑</string>
+    <string name="recommended">推荐</string>
+    <string name="daily_songs">每日推荐</string>
+    <string name="my_playlist">我的歌单</string>
+    <string name="liked_songs">我喜欢的音乐</string>
+
+    <!-- Player -->
+    <string name="unknown_song">未知歌曲</string>
+    <string name="unknown_artist">未知歌手</string>
+    <string name="unknown_album">未知专辑</string>
+    <string name="no_lyric">暂无歌词</string>
+    <string name="loading_lyric">歌词加载中…</string>
+    <string name="lyric_translation">显示翻译</string>
+
+    <!-- Playback controls -->
+    <string name="play">播放</string>
+    <string name="pause">暂停</string>
+    <string name="next">下一首</string>
+    <string name="previous">上一首</string>
+    <string name="shuffle">随机播放</string>
+    <string name="repeat_all">列表循环</string>
+    <string name="repeat_one">单曲循环</string>
+
+    <!-- Misc -->
+    <string name="loading">加载中…</string>
+    <string name="error_generic">发生错误，请重试</string>
+    <string name="retry">重试</string>
+    <string name="ok">确定</string>
+    <string name="cancel">取消</string>
+</resources>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- BlueArchive primary palette -->
+    <color name="ba_blue_dark">#1A2744</color>
+    <color name="ba_blue_mid">#2A3F6F</color>
+    <color name="ba_blue_accent">#4B8EE8</color>
+    <color name="ba_blue_light">#7BB3F5</color>
+    <color name="ba_sky">#B8D4F8</color>
+    <color name="ba_white">#F0F4FF</color>
+    <color name="ba_gold">#F5C842</color>
+    <color name="ba_gold_dark">#C89F1A</color>
+
+    <!-- Background shades -->
+    <color name="ba_bg_darkest">#0A0F1E</color>
+    <color name="ba_bg_dark">#121C35</color>
+    <color name="ba_bg_darker">#1A2744</color>
+    <color name="ba_bg_card">#1E2D50</color>
+
+    <!-- Semantic aliases used by layouts -->
+    <color name="ba_primary">#4B8EE8</color>
+    <color name="ba_on_primary">#FFFFFF</color>
+    <color name="ba_on_surface">#E8EEF8</color>
+    <color name="ba_on_surface_variant">#9AB3D8</color>
+    <color name="ba_error">#CF6679</color>
+    <color name="ba_surface">#1E2D50</color>
+
+    <!-- Material color roles -->
+    <color name="colorPrimary">#2A3F6F</color>
+    <color name="colorPrimaryDark">#1A2744</color>
+    <color name="colorPrimaryVariant">#1A2744</color>
+    <color name="colorSecondary">#4B8EE8</color>
+    <color name="colorSecondaryVariant">#7BB3F5</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+    <color name="colorOnSecondary">#1A2744</color>
+    <color name="colorSurface">#1E2D50</color>
+    <color name="colorOnSurface">#E8EEF8</color>
+    <color name="colorBackground">#121C35</color>
+    <color name="colorOnBackground">#E8EEF8</color>
+    <color name="colorError">#CF6679</color>
+    <color name="colorOnError">#FFFFFF</color>
+
+    <!-- Player specific -->
+    <color name="player_bg">#0D1525</color>
+    <color name="player_text_primary">#F0F4FF</color>
+    <color name="player_text_secondary">#9AB3D8</color>
+    <color name="lyric_highlight">#F5C842</color>
+    <color name="lyric_normal">#9AB3D8</color>
+</resources>

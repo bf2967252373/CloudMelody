@@ -1,0 +1,161 @@
+package com.cloudmelody.service
+
+import android.app.*
+import android.content.Intent
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.os.Binder
+import android.os.IBinder
+import android.util.Log
+import androidx.core.app.NotificationCompat
+import com.cloudmelody.model.Song
+
+/**
+ * Background music playback service.
+ * Implementation provides a real MediaPlayer and a foreground notification.
+ */
+class MusicService : Service() {
+
+    private val binder = MusicBinder()
+    private var mediaPlayer: MediaPlayer? = null
+    private val NOTIFICATION_ID = 1001
+    private val CHANNEL_ID = "music_playback_channel"
+
+    // ─── Playback state ───────────────────────────────────────────────────────
+    private var playlist: List<Song> = emptyList()
+    private var currentIndex: Int = -1
+    var isPlaying: Boolean = false
+        private set
+
+    val currentSong: Song? get() = playlist.getOrNull(currentIndex)
+
+    // ─── Binder ───────────────────────────────────────────────────────────────
+    inner class MusicBinder : Binder() {
+        fun getService(): MusicService = this@MusicService
+    }
+
+    override fun onBind(intent: Intent): IBinder = binder
+
+    override fun onCreate() {
+        super.onCreate()
+        createNotificationChannel()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // When the service is started, we ensure it's in foreground if music is playing
+        if (isPlaying) {
+            startForegroundNotification()
+        }
+        return START_STICKY
+    }
+
+    private fun createNotificationChannel() {
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Music Playback",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            descriptionText = "Controls for CloudMelody music playback"
+        }
+        val manager = getSystemService(NotificationManager::class.java)
+        manager?.createNotificationChannel(channel)
+    }
+
+    private fun startForegroundNotification() {
+        val song = currentSong
+        val title = song?.name ?: "Unknown Song"
+        val artist = song?.artist ?: "Unknown Artist"
+
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0,
+            Intent().setComponent(ComponentName("com.cloudmelody", "com.cloudmelody.ui.player.PlayerActivity")),
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setContentTitle(title)
+            .setContentText(artist)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(pendingIntent)
+            .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(artist))
+            .build()
+
+        startForeground(NOTIFICATION_ID, notification)
+    }
+
+    // ─── Public controls ──────────────────────────────────────────────────────
+
+    fun setPlaylist(songs: List<Song>, startIndex: Int = 0) {
+        playlist = songs
+        currentIndex = startIndex.coerceIn(0, songs.lastIndex.coerceAtLeast(0))
+    }
+
+    fun play() {
+        val song = currentSong ?: return
+
+        if (mediaPlayer == null) {
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+            }
+        }
+
+        try {
+            // In a real app, you'd use the song.url or a local path.
+            // Since the API is separate, we assume a URL is available or use a placeholder for now.
+            // This is the critical part where the actual music stream is connected.
+            mediaPlayer?.apply {
+                reset()
+                // We need a URL for the actual song. For now, we assume the song ID can be used
+                // to fetch a stream from the NeteaseApi (which is the intent of the project).
+                // This is a placeholder for the real stream URL.
+                setDataSource("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+                prepareAsync()
+                setOnPreparedListener {
+                    start()
+                    isPlaying = true
+                    startForegroundNotification()
+                }
+                setOnCompletionListener { skipNext() }
+            }
+        } catch (e: Exception) {
+            Log.e("MusicService", "Error playing song", e)
+        }
+    }
+
+    fun pause() {
+        mediaPlayer?.pause()
+        isPlaying = false
+        // We keep the notification but update it or let it stay as "Paused"
+        startForegroundNotification()
+    }
+
+    fun togglePlayPause() {
+        if (isPlaying) pause() else play()
+    }
+
+    fun skipNext() {
+        if (playlist.isEmpty()) return
+        currentIndex = (currentIndex + 1) % playlist.size
+        play()
+    }
+
+    fun skipPrev() {
+        if (playlist.isEmpty()) return
+        currentIndex = if (currentIndex <= 0) playlist.lastIndex else currentIndex - 1
+        play()
+    }
+
+    override fun onDestroy() {
+        mediaPlayer?.release()
+        mediaPlayer = null
+        isPlaying = false
+        super.onDestroy()
+    }
+}
