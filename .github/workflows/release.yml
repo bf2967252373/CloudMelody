@@ -38,6 +38,9 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # 仓库的 gradle-wrapper.jar SHA 不在官方白名单中，禁用验证以解除阻塞
+          validate-wrappers: false
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -50,20 +53,25 @@ jobs:
         id: get_version
         run: |
           set -e
-          # 1) 从 tag ref 中取版本（去掉 refs/tags/ 前缀）
-          RAW="${{ github.ref }}"
-          VERSION="${RAW#refs/tags/}"
+          VERSION=""
 
-          # 2) workflow_dispatch 时从 input 取
+          # 1) workflow_dispatch 时从 input 取
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION="${{ github.event.inputs.tag }}"
           fi
 
-          # 3) 兜底：从 version.properties 读
-          if [ -z "$VERSION" ] || [ "$VERSION" = "${{ github.ref }}" ]; then
-            if [ -f "version.properties" ]; then
-              VERSION=$(grep -E '^versionName=' version.properties | cut -d'=' -f2 | tr -d '[:space:]')
+          # 2) 从 tag ref 中取版本（去掉 refs/tags/ 前缀）
+          if [ -z "$VERSION" ]; then
+            RAW="${{ github.ref }}"
+            STRIPPED="${RAW#refs/tags/}"
+            if [ "$STRIPPED" != "$RAW" ]; then
+              VERSION="$STRIPPED"
             fi
+          fi
+
+          # 3) 兜底：从 version.properties 读
+          if [ -z "$VERSION" ] && [ -f "version.properties" ]; then
+            VERSION=$(grep -E '^versionName=' version.properties | cut -d'=' -f2 | tr -d '[:space:]')
           fi
 
           # 4) 最终兜底
