@@ -1,71 +1,100 @@
 name: Release
 
+# 只在推送 tag（v*）时触发，绝不在普通 branch push 时运行
 on:
   push:
     tags:
       - 'v*'
+  # 允许手动触发补救出包
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing tag to release (e.g. v1.0.17)'
+        required: true
+        type: string
 
 jobs:
   build-and-publish:
     name: Build and Publish Release APK
     runs-on: ubuntu-latest
+    # job 级二道闸：即使触发条件被误改，非 tag ref 也直接 skip
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+
+    permissions:
+      contents: write   # softprops/action-gh-release 创建 Release 必须有写权限
 
     steps:
-      # ✅ 修复1: checkout 升级到 v4（已是最新，保留）
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag || github.ref }}
 
-      # ✅ 修复2: setup-java 升级到 v4 → v5（支持 Node.js 24）
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # ✅ 修复3: setup-gradle 从 v3 升级到 v4（修复 Cache 400 错误，支持 Node.js 24）
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # ✅ 修复4: 确保 gradlew 有执行权限
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # Build Release APK
       - name: Build Release APK
-        run: ./gradlew assembleRelease
-        env:
-          # ✅ 修复5: 如果你的 build.gradle 里有签名配置，需要在 repo Settings → Secrets 里添加这些变量
-          # KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
-          # KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          # KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-          # STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
 
-      # 获取版本号（从 tag 或 version.properties）
-      - name: Get version name
+      # 健壮的版本号提取：tag 优先，version.properties 兜底
+      - name: Resolve version name
         id: get_version
         run: |
-          if [ -f "version.properties" ]; then
-            VERSION=$(grep "versionName" version.properties | cut -d'=' -f2 | tr -d '[:space:]')
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          else
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          set -e
+          # 1) 从 tag ref 中取版本（去掉 refs/tags/ 前缀）
+          RAW="${{ github.ref }}"
+          VERSION="${RAW#refs/tags/}"
+
+          # 2) workflow_dispatch 时从 input 取
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.tag }}"
           fi
 
-      # 上传 APK 为 Artifact（方便调试）
+          # 3) 兜底：从 version.properties 读
+          if [ -z "$VERSION" ] || [ "$VERSION" = "${{ github.ref }}" ]; then
+            if [ -f "version.properties" ]; then
+              VERSION=$(grep -E '^versionName=' version.properties | cut -d'=' -f2 | tr -d '[:space:]')
+            fi
+          fi
+
+          # 4) 最终兜底
+          if [ -z "$VERSION" ]; then
+            VERSION="0.0.0-$(date +%Y%m%d%H%M%S)"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION"
+
+      - name: Verify APK output exists
+        run: |
+          ls -lah app/build/outputs/apk/release/ || \
+            (echo "::error::Release APK not found in expected path" && exit 1)
+
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: CloudMelody-release-${{ steps.get_version.outputs.version }}
           path: app/build/outputs/apk/release/*.apk
           retention-days: 30
+          if-no-files-found: error
 
-      # 发布到 GitHub Releases
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
         with:
           name: CloudMelody ${{ steps.get_version.outputs.version }}
+          tag_name: ${{ steps.get_version.outputs.version }}
           files: app/build/outputs/apk/release/*.apk
           generate_release_notes: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
