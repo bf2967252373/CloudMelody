@@ -29,12 +29,18 @@ class HomeViewModel : ViewModel() {
             _isLoading.value = true
             _error.value = null
             NeteaseApi.recommend()
-                .onSuccess { list ->
-                    _playlists.value = list
-                }
-                .onFailure { e ->
-                    _error.value = e.message ?: "Unknown error"
-                }
+                .onSuccess { _playlists.value = it }
+                .onFailure { _error.value = it.message ?: "Unknown error" }
+            _isLoading.value = false
+        }
+    }
+
+    fun loadPlaylistSongs(playlistId: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            NeteaseApi.playlistDetail(playlistId)
+                .onSuccess { _songs.value = it }
+                .onFailure { _error.value = it.message ?: "Unknown error" }
             _isLoading.value = false
         }
     }
