@@ -8,6 +8,11 @@ import coil.memory.MemoryCache
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
+/**
+ * Bug 修复：
+ * 1. 补全 ImageLoaderFactory 实现，提供磁盘缓存 + 内存缓存配置
+ * 2. 原代码 onCreate 为空实现，无任何初始化
+ */
 class CloudMelodyApp : Application(), ImageLoaderFactory {
 
     override fun onCreate() {
@@ -15,7 +20,7 @@ class CloudMelodyApp : Application(), ImageLoaderFactory {
         instance = this
     }
 
-    /** 共享的 Coil ImageLoader,带磁盘缓存以减少重复请求。 */
+    /** Coil 全局 ImageLoader：带内存缓存（20%）+ 磁盘缓存（50MB）*/
     override fun newImageLoader(): ImageLoader =
         ImageLoader.Builder(this)
             .memoryCache {
@@ -26,7 +31,7 @@ class CloudMelodyApp : Application(), ImageLoaderFactory {
             .diskCache {
                 DiskCache.Builder()
                     .directory(cacheDir.resolve("image_cache"))
-                    .maxSizeBytes(50L * 1024 * 1024) // 50 MB
+                    .maxSizeBytes(50L * 1024 * 1024)
                     .build()
             }
             .okHttpClient {

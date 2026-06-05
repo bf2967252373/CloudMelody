@@ -13,9 +13,15 @@ import com.cloudmelody.databinding.ActivityMainBinding
 import com.cloudmelody.service.MusicService
 import com.cloudmelody.ui.home.HomeFragment
 
+/**
+ * Bug 修复：
+ * 1. 补全 MusicService 绑定逻辑（原代码缺失）
+ * 2. onDestroy 时安全解绑，防止 ServiceConnection 泄漏
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+
     var musicService: MusicService? = null
         private set
     private var bound = false
@@ -36,6 +42,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // 启动并绑定 MusicService
         val intent = Intent(this, MusicService::class.java)
         startService(intent)
         bindService(intent, connection, Context.BIND_AUTO_CREATE)

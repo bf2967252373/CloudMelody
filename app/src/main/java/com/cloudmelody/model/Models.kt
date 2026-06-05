@@ -1,9 +1,9 @@
 package com.cloudmelody.model
 
 /**
- * 核心数据模型 —— 所有模型集中于此,避免重复定义。
- * 注意:原仓库中 Playlist.kt 与 Models.kt 同时定义了 Playlist,
- * 必须删除 Playlist.kt,只保留此处定义。
+ * 核心数据模型 —— 所有模型集中于此，避免重复定义。
+ * 原仓库中 Playlist.kt 与 Models.kt 同时定义了 Playlist（字段还不一致），
+ * 已删除 Playlist.kt，只保留此处定义。
  */
 
 data class Song(
@@ -13,7 +13,7 @@ data class Song(
     val album: String = "",
     val coverUrl: String? = null,
     val duration: Long = 0L,   // 毫秒
-    val url: String? = null    // 播放地址
+    val url: String? = null    // 播放地址，懒加载
 )
 
 data class Playlist(

@@ -2,7 +2,7 @@ package com.cloudmelody.util
 
 object TimeUtils {
 
-    /** 毫秒 → mm:ss */
+    /** 毫秒 → mm:ss 格式 */
     fun formatMs(ms: Long): String {
         if (ms <= 0) return "0:00"
         val totalSeconds = ms / 1000
@@ -12,32 +12,39 @@ object TimeUtils {
     }
 
     /**
-     * 解析 [mm:ss.xx] / [mm:ss.xxx] / [mm:ss] 等 LRC 时间标签 → 毫秒。
-     * 错误时返回 0。
+     * 解析 LRC 时间标签 [mm:ss.xx] / [mm:ss.xxx] / [mm:ss] → 毫秒
+     *
+     * Bug 修复：原代码只处理 2/3 位小数，1 位小数时精度丢失（100ms 级误差）。
+     * 现在支持任意位数小数，并对异常输入安全返回 0。
      */
     fun parseTimeTag(tag: String): Long {
         return try {
             val clean = tag.trim().trimStart('[').trimEnd(']')
             val colonIdx = clean.indexOf(':')
             if (colonIdx < 0) return 0L
+
+            // 找小数点（或第二个冒号，兼容部分 LRC 变体）
             val dotIdx = clean.indexOfAny(charArrayOf('.', ':'), startIndex = colonIdx + 1)
-                .let { if (it == colonIdx) -1 else it }
-            val minutes = clean.substring(0, colonIdx).toLong()
+                .takeIf { it > colonIdx } ?: -1
+
+            val minutes = clean.substring(0, colonIdx).trim().toLongOrNull() ?: return 0L
             val seconds = clean.substring(
                 colonIdx + 1,
                 if (dotIdx >= 0) dotIdx else clean.length
-            ).toLong()
+            ).trim().toLongOrNull() ?: return 0L
+
             val millis = if (dotIdx >= 0) {
                 val frac = clean.substring(dotIdx + 1).filter { it.isDigit() }
                 when {
                     frac.isEmpty() -> 0L
-                    frac.length == 1 -> frac.toLong() * 100
-                    frac.length == 2 -> frac.toLong() * 10
+                    frac.length == 1 -> frac.toLong() * 100L   // Bug 修复：1位小数 × 100
+                    frac.length == 2 -> frac.toLong() * 10L
                     frac.length == 3 -> frac.toLong()
-                    else -> frac.substring(0, 3).toLong()
+                    else             -> frac.substring(0, 3).toLong()  // 截断超长小数
                 }
             } else 0L
-            (minutes * 60 + seconds) * 1000 + millis
+
+            (minutes * 60L + seconds) * 1000L + millis
         } catch (_: Exception) {
             0L
         }

@@ -10,6 +10,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+/**
+ * Bug 修复：
+ * 1. 原代码调用 NeteaseApi.recommend() 风格不一致（有时写 NeteaseApi.get().recommend()）
+ * 2. 原代码没有 isLoading / error 状态，UI 无法感知请求状态
+ * 3. 统一使用 StateFlow 替代 LiveData，配合 repeatOnLifecycle 使用
+ */
 class HomeViewModel : ViewModel() {
 
     private val _playlists = MutableStateFlow<List<Playlist>>(emptyList())
