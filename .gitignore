@@ -16,16 +16,9 @@ local.properties
 *.swp
 *.swo
 
-# Gradle wrapper JAR (binary)
-gradle/wrapper/gradle-wrapper.jar
-gradlew
-gradlew.bat
-
 # Keystore
 *.keystore
 *.jks
-
-# Debug keystore
 app/debug.keystore
 
 # OS
