@@ -278,10 +278,10 @@ class MusicService : Service() {
             setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS or
                     MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS)
             setCallback(object : MediaSessionCompat.Callback() {
-                override fun onPlay() { play() }
-                override fun onPause() { pause() }
-                override fun onSkipToNext() { skipNext() }
-                override fun onSkipToPrevious() { skipPrev() }
+                override fun onPlay()  { this@MusicService.play() }
+                override fun onPause() { this@MusicService.pause() }
+                override fun onSkipToNext() { this@MusicService.skipNext() }
+                override fun onSkipToPrevious() { this@MusicService.skipPrev() }
             })
             isActive = true
         }
@@ -318,6 +318,4 @@ class MusicService : Service() {
     override fun onDestroy() {
         prepareJob?.cancel()
         releasePlayer()
-        mediaSession.isActive = false
-        mediaSession.release()
-        scope.cancel(
+        mediaSess
