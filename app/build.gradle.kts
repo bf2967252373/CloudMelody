@@ -98,4 +98,4 @@ dependencies {
 
     // Media notification + media session (for lock-screen controls)
     implementation("androidx.media:media:1.7.0")
-  
+}
