@@ -1,0 +1,32 @@
+# Android
+*.apk
+*.aab
+*.dex
+*.class
+bin/
+gen/
+build/
+.gradle/
+local.properties
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+*.swp
+*.swo
+
+# Gradle wrapper JAR (binary)
+gradle/wrapper/gradle-wrapper.jar
+gradlew
+gradlew.bat
+
+# Keystore
+*.keystore
+*.jks
+
+# Debug keystore
+app/debug.keystore
+
+# OS
+Thumbs.db
