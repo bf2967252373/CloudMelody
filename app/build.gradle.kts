@@ -94,8 +94,8 @@ dependencies {
     // Lifecycle / ViewModel
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle")
+    implementation("androidx.fragment:fragment-ktx:1.7.1")
 
     // Media notification + media session (for lock-screen controls)
     implementation("androidx.media:media:1.7.0")
-    implementation("androidx.media2:media2-session:1.3.0")
-}
+  

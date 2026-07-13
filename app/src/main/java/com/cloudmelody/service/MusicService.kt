@@ -179,7 +179,7 @@ class MusicService : Service() {
                     }
                     setOnPreparedListener { mp ->
                         mp.start()
-                        isPlaying = true
+                        this@MusicService.isPlaying = true
                         onPlayStateChanged?.invoke(true)
                         startForeground(NOTIFICATION_ID, buildNotification())
                         updateMediaSessionState()
@@ -205,7 +205,7 @@ class MusicService : Service() {
             RepeatMode.NONE -> {
                 if (currentIndex < playlist.lastIndex) skipNext()
                 else {
-                    isPlaying = false
+                    this@MusicService.isPlaying = false
                     onPlayStateChanged?.invoke(false)
                     updateMediaSessionState()
                 }
@@ -320,7 +320,4 @@ class MusicService : Service() {
         releasePlayer()
         mediaSession.isActive = false
         mediaSession.release()
-        scope.cancel()
-        super.onDestroy()
-    }
-}
+        scope.cancel(
